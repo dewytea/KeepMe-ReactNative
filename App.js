@@ -1,36 +1,187 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  TouchableOpacity, 
+  Alert, 
+  TextInput, 
+  ScrollView 
+} from 'react-native';
+import { useState } from 'react';
 
 export default function App() {
-  const handleEmergencyPress = () => {
+  // 상태 관리
+  const [contacts, setContacts] = useState([]);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  // 연락처 추가
+  const handleAddContact = () => {
+    if (!name || !phone) {
+      Alert.alert('⚠️ 입력 오류', '이름과 전화번호를 모두 입력해주세요.');
+      return;
+    }
+
+    const newContact = {
+      id: Date.now().toString(),
+      name: name,
+      phone: phone,
+    };
+
+    setContacts([...contacts, newContact]);
+    setName('');
+    setPhone('');
+    setShowAddForm(false);
+    Alert.alert('✅ 추가 완료', `${name}님이 연락처에 추가되었습니다.`);
+  };
+
+  // 연락처 삭제
+  const handleDeleteContact = (id, contactName) => {
     Alert.alert(
-      '🚨 비상 신호',
-      '비상 연락을 발송하시겠습니까?',
+      '🗑️ 연락처 삭제',
+      `${contactName}님을 삭제하시겠습니까?`,
       [
         { text: '취소', style: 'cancel' },
-        { text: '확인', onPress: () => Alert.alert('✅ 발송 완료!') }
+        { 
+          text: '삭제', 
+          style: 'destructive',
+          onPress: () => {
+            setContacts(contacts.filter(c => c.id !== id));
+            Alert.alert('✅ 삭제 완료');
+          }
+        }
+      ]
+    );
+  };
+
+  // 비상 연락
+  const handleEmergency = () => {
+    if (contacts.length === 0) {
+      Alert.alert('⚠️ 연락처 없음', '먼저 비상 연락처를 추가해주세요.');
+      return;
+    }
+
+    const contactList = contacts.map(c => `${c.name}: ${c.phone}`).join('\n');
+    Alert.alert(
+      '🚨 비상 신호 발송',
+      `다음 연락처로 비상 신호를 보냅니다:\n\n${contactList}`,
+      [
+        { text: '취소', style: 'cancel' },
+        { text: '발송', onPress: () => Alert.alert('✅ 발송 완료!') }
       ]
     );
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>🛡️ KeepMe</Text>
-      <Text style={styles.subtitle}>나를 지켜주는 비상 연락 앱</Text>
-      
-      <TouchableOpacity 
-        style={styles.emergencyButton}
-        onPress={handleEmergencyPress}
-      >
-        <Text style={styles.buttonText}>📞 비상 연락하기</Text>
-      </TouchableOpacity>
-
-      <View style={styles.infoBox}>
-        <Text style={styles.infoText}>✅ React Native 성공!</Text>
-        <Text style={styles.infoText}>🚀 PWA → 진짜 앱으로!</Text>
-      </View>
-      
       <StatusBar style="light" />
+      
+      {/* 헤더 */}
+      <View style={styles.header}>
+        <Text style={styles.title}>🛡️ KeepMe</Text>
+        <Text style={styles.subtitle}>비상 연락 앱</Text>
+      </View>
+
+      {/* 메인 컨텐츠 */}
+      <ScrollView style={styles.content}>
+        
+        {/* 비상 버튼 */}
+        <TouchableOpacity 
+          style={styles.emergencyButton}
+          onPress={handleEmergency}
+        >
+          <Text style={styles.emergencyButtonText}>🚨 비상 연락하기</Text>
+        </TouchableOpacity>
+
+        {/* 연락처 추가 버튼 */}
+        {!showAddForm && (
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={() => setShowAddForm(true)}
+          >
+            <Text style={styles.addButtonText}>➕ 연락처 추가</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* 연락처 추가 폼 */}
+        {showAddForm && (
+          <View style={styles.addForm}>
+            <Text style={styles.formTitle}>새 연락처 추가</Text>
+            
+            <TextInput
+              style={styles.input}
+              placeholder="이름"
+              placeholderTextColor="#999"
+              value={name}
+              onChangeText={setName}
+            />
+            
+            <TextInput
+              style={styles.input}
+              placeholder="전화번호 (예: 010-1234-5678)"
+              placeholderTextColor="#999"
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+            />
+
+            <View style={styles.formButtons}>
+              <TouchableOpacity 
+                style={[styles.formButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowAddForm(false);
+                  setName('');
+                  setPhone('');
+                }}
+              >
+                <Text style={styles.formButtonText}>취소</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.formButton, styles.saveButton]}
+                onPress={handleAddContact}
+              >
+                <Text style={styles.formButtonText}>저장</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* 연락처 목록 */}
+        <View style={styles.contactList}>
+          <Text style={styles.listTitle}>
+            비상 연락처 ({contacts.length}명)
+          </Text>
+          
+          {contacts.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>
+                📱 아직 등록된 연락처가 없습니다
+              </Text>
+              <Text style={styles.emptySubText}>
+                비상 시 연락할 사람을 추가해주세요!
+              </Text>
+            </View>
+          ) : (
+            contacts.map((contact) => (
+              <View key={contact.id} style={styles.contactCard}>
+                <View style={styles.contactInfo}>
+                  <Text style={styles.contactName}>{contact.name}</Text>
+                  <Text style={styles.contactPhone}>{contact.phone}</Text>
+                </View>
+                <TouchableOpacity 
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteContact(contact.id, contact.name)}
+                >
+                  <Text style={styles.deleteButtonText}>🗑️</Text>
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -39,43 +190,154 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#667eea',
+  },
+  header: {
+    paddingTop: 60,
+    paddingBottom: 20,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
   },
   title: {
-    fontSize: 56,
+    fontSize: 42,
     fontWeight: 'bold',
     color: 'white',
-    marginBottom: 10,
   },
   subtitle: {
-    fontSize: 20,
+    fontSize: 16,
     color: 'white',
-    marginBottom: 50,
-    textAlign: 'center',
+    marginTop: 5,
+  },
+  content: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingHorizontal: 20,
+    paddingTop: 30,
   },
   emergencyButton: {
     backgroundColor: '#ff6b9d',
     paddingVertical: 20,
-    paddingHorizontal: 50,
-    borderRadius: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 8,
   },
-  buttonText: {
+  emergencyButtonText: {
     color: 'white',
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
   },
-  infoBox: {
-    marginTop: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 20,
-    borderRadius: 15,
+  addButton: {
+    backgroundColor: '#667eea',
+    paddingVertical: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  infoText: {
+  addButtonText: {
     color: 'white',
     fontSize: 16,
-    textAlign: 'center',
-    marginVertical: 5,
+    fontWeight: 'bold',
+  },
+  addForm: {
+    backgroundColor: '#f5f5f5',
+    padding: 20,
+    borderRadius: 15,
+    marginBottom: 20,
+  },
+  formTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#333',
+  },
+  input: {
+    backgroundColor: 'white',
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  formButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  formButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  cancelButton: {
+    backgroundColor: '#999',
+  },
+  saveButton: {
+    backgroundColor: '#667eea',
+  },
+  formButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  contactList: {
+    marginBottom: 30,
+  },
+  listTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#333',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 5,
+  },
+  emptySubText: {
+    fontSize: 14,
+    color: '#999',
+  },
+  contactCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#f9f9f9',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  contactInfo: {
+    flex: 1,
+  },
+  contactName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 3,
+  },
+  contactPhone: {
+    fontSize: 14,
+    color: '#666',
+  },
+  deleteButton: {
+    padding: 5,
+  },
+  deleteButtonText: {
+    fontSize: 24,
   },
 });
