@@ -17,6 +17,32 @@ export default function App() {
   const [phone, setPhone] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
 
+  // 전화번호 포맷팅 함수 (010-1234-5678)
+  const formatPhoneNumber = (number) => {
+    // 숫자만 추출
+    const cleaned = number.replace(/\D/g, '');
+    
+    // 11자리 숫자를 010-1234-5678 형식으로
+    if (cleaned.length === 11) {
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
+    }
+    // 10자리 숫자를 010-123-4567 형식으로
+    else if (cleaned.length === 10) {
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+    }
+    // 그 외는 그대로 반환
+    return cleaned;
+  };
+
+  // 전화번호 입력 핸들러 (숫자만 입력)
+  const handlePhoneInput = (text) => {
+    // 숫자만 추출
+    const numbersOnly = text.replace(/\D/g, '');
+    // 최대 11자리까지만
+    const limited = numbersOnly.slice(0, 11);
+    setPhone(limited);
+  };
+
   // 연락처 추가
   const handleAddContact = () => {
     if (!name || !phone) {
@@ -24,10 +50,16 @@ export default function App() {
       return;
     }
 
+    // 전화번호 길이 체크 (10-11자리)
+    if (phone.length < 10 || phone.length > 11) {
+      Alert.alert('⚠️ 입력 오류', '올바른 전화번호를 입력해주세요.\n(10-11자리 숫자)');
+      return;
+    }
+
     const newContact = {
       id: Date.now().toString(),
       name: name,
-      phone: phone,
+      phone: formatPhoneNumber(phone), // 포맷팅해서 저장
     };
 
     setContacts([...contacts, newContact]);
@@ -85,7 +117,7 @@ export default function App() {
       </View>
 
       {/* 메인 컨텐츠 */}
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         
         {/* 비상 버튼 */}
         <TouchableOpacity 
@@ -120,12 +152,26 @@ export default function App() {
             
             <TextInput
               style={styles.input}
-              placeholder="전화번호 (예: 010-1234-5678)"
+              placeholder="전화번호"
               placeholderTextColor="#999"
               value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
+              onChangeText={handlePhoneInput}
+              keyboardType="numeric"
+              maxLength={11}
             />
+            
+            {/* 전화번호 입력 안내 */}
+            <Text style={styles.helpText}>
+              💡 전화번호만 연속으로 입력해주세요 (예: 01012345678)
+            </Text>
+            
+            {/* 전화번호 미리보기 */}
+            {phone.length >= 10 && (
+              <View style={styles.preview}>
+                <Text style={styles.previewLabel}>저장될 번호:</Text>
+                <Text style={styles.previewNumber}>{formatPhoneNumber(phone)}</Text>
+              </View>
+            )}
 
             <View style={styles.formButtons}>
               <TouchableOpacity 
@@ -264,6 +310,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: '#ddd',
+  },
+  helpText: {
+    fontSize: 12,
+    color: '#667eea',
+    marginBottom: 10,
+    marginTop: -5,
+    paddingHorizontal: 5,
+  },
+  preview: {
+    backgroundColor: '#e8f4ff',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#667eea',
+  },
+  previewLabel: {
+    fontSize: 12,
+    color: '#667eea',
+    marginBottom: 3,
+  },
+  previewNumber: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
   },
   formButtons: {
     flexDirection: 'row',
