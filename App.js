@@ -6,7 +6,8 @@ import {
   TouchableOpacity, 
   Alert, 
   TextInput, 
-  ScrollView 
+  ScrollView,
+  Linking
 } from 'react-native';
 import { useState } from 'react';
 
@@ -19,26 +20,20 @@ export default function App() {
 
   // 전화번호 포맷팅 함수 (010-1234-5678)
   const formatPhoneNumber = (number) => {
-    // 숫자만 추출
     const cleaned = number.replace(/\D/g, '');
     
-    // 11자리 숫자를 010-1234-5678 형식으로
     if (cleaned.length === 11) {
       return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7, 11)}`;
     }
-    // 10자리 숫자를 010-123-4567 형식으로
     else if (cleaned.length === 10) {
       return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
     }
-    // 그 외는 그대로 반환
     return cleaned;
   };
 
   // 전화번호 입력 핸들러 (숫자만 입력)
   const handlePhoneInput = (text) => {
-    // 숫자만 추출
     const numbersOnly = text.replace(/\D/g, '');
-    // 최대 11자리까지만
     const limited = numbersOnly.slice(0, 11);
     setPhone(limited);
   };
@@ -50,7 +45,6 @@ export default function App() {
       return;
     }
 
-    // 전화번호 길이 체크 (10-11자리)
     if (phone.length < 10 || phone.length > 11) {
       Alert.alert('⚠️ 입력 오류', '올바른 전화번호를 입력해주세요.\n(10-11자리 숫자)');
       return;
@@ -59,7 +53,7 @@ export default function App() {
     const newContact = {
       id: Date.now().toString(),
       name: name,
-      phone: formatPhoneNumber(phone), // 포맷팅해서 저장
+      phone: formatPhoneNumber(phone),
     };
 
     setContacts([...contacts, newContact]);
@@ -88,6 +82,25 @@ export default function App() {
     );
   };
 
+  // 실제 전화 걸기 함수
+  const makePhoneCall = (phoneNumber) => {
+    const cleanNumber = phoneNumber.replace(/-/g, '');
+    const phoneUrl = `tel:${cleanNumber}`;
+    
+    Linking.canOpenURL(phoneUrl)
+      .then((supported) => {
+        if (supported) {
+          return Linking.openURL(phoneUrl);
+        } else {
+          Alert.alert('⚠️ 오류', '전화를 걸 수 없습니다.');
+        }
+      })
+      .catch((err) => {
+        Alert.alert('⚠️ 오류', '전화 연결에 실패했습니다.');
+        console.error('전화 연결 오류:', err);
+      });
+  };
+
   // 비상 연락
   const handleEmergency = () => {
     if (contacts.length === 0) {
@@ -95,13 +108,23 @@ export default function App() {
       return;
     }
 
-    const contactList = contacts.map(c => `${c.name}: ${c.phone}`).join('\n');
+    const firstContact = contacts[0];
+    
+    const contactList = contacts.map((c, index) => 
+      `${index + 1}. ${c.name}: ${c.phone}`
+    ).join('\n');
+
     Alert.alert(
-      '🚨 비상 신호 발송',
-      `다음 연락처로 비상 신호를 보냅니다:\n\n${contactList}`,
+      '🚨 비상 신호',
+      `첫 번째 연락처로 전화를 걸까요?\n\n📞 ${firstContact.name}: ${firstContact.phone}\n\n등록된 전체 연락처:\n${contactList}`,
       [
         { text: '취소', style: 'cancel' },
-        { text: '발송', onPress: () => Alert.alert('✅ 발송 완료!') }
+        { 
+          text: '📞 전화하기', 
+          onPress: () => {
+            makePhoneCall(firstContact.phone);
+          }
+        }
       ]
     );
   };
@@ -160,12 +183,10 @@ export default function App() {
               maxLength={11}
             />
             
-            {/* 전화번호 입력 안내 */}
             <Text style={styles.helpText}>
               💡 전화번호만 연속으로 입력해주세요 (예: 01012345678)
             </Text>
             
-            {/* 전화번호 미리보기 */}
             {phone.length >= 10 && (
               <View style={styles.preview}>
                 <Text style={styles.previewLabel}>저장될 번호:</Text>
